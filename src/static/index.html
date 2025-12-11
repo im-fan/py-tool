@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工具箱</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/sortablejs/1.15.0/Sortable.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>工具箱</h1>
+            <div class="search-add">
+                <div class="search-box">
+                    <input type="text" id="search-input" placeholder="按名称搜索应用...">
+                    <i class="fas fa-search"></i>
+                </div>
+                <button class="btn btn-primary" id="add-app-btn">
+                    <i class="fas fa-plus"></i> 新增应用
+                </button>
+                <button class="btn btn-secondary" id="settings-btn">
+                    <i class="fas fa-cog"></i> 设置
+                </button>
+            </div>
+        </header>
+        
+        <div class="cards-container" id="cards-container">
+            <!-- 卡片将通过JavaScript动态生成 -->
+        </div>
+    </div>
+    
+    <!-- 新增/编辑模态框 -->
+    <div class="modal" id="app-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">新增应用</h2>
+                <button class="close-btn" id="close-modal">&times;</button>
+            </div>
+            <form id="app-form">
+                <input type="hidden" id="app-id" name="id">
+                
+                <div class="form-group">
+                    <label for="app-name">应用名称</label>
+                    <input type="text" id="app-name" name="name" required placeholder="请输入应用名称">
+                </div>
+                
+                <div class="form-group">
+                    <label for="app-tags">分类标签（用逗号分隔）</label>
+                    <input type="text" id="app-tags" name="tags" placeholder="例如：工具,数据分析,爬虫">
+                </div>
+                
+                <div class="form-group">
+                    <label for="app-description">功能描述</label>
+                    <textarea id="app-description" name="description" placeholder="请输入应用的功能描述"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="app-params">自定义入参（JSON格式）</label>
+                    <textarea id="app-params" name="params" placeholder='例如：{"url": "https://example.com", "count": 10}'></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="app-code">代码</label>
+                    <p class="help-text">
+                        代码中可以使用自定义入参（JSON格式），例如：<code>params.url</code>。<br>
+                    </p>
+                    <div class="code-editor-container">
+                        <div class="code-editor-header">
+                            <i class="fab fa-python"></i> Python Code
+                        </div>
+                        <div id="code-editor" style="width: 100%; height: 400px;"></div>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="cancel-btn">取消</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- 执行应用模态框 -->
+    <div class="modal" id="run-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="run-modal-title">执行应用</h2>
+                <button class="close-btn" id="close-run-modal">&times;</button>
+            </div>
+            <div id="run-modal-body">
+                <!-- 应用信息将动态生成 -->
+            </div>
+            <!-- 运营日志和结果输出区域 -->
+            <div id="run-results" style="display: none; margin-top: 20px;">
+                <div class="form-group">
+                    <label for="console-output">控制台输出</label>
+                    <div style="height: 200px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 10px; background-color: #2d2d2d; color: #f8f8f2; font-family: 'Courier New', Courier, monospace; font-size: 12px; line-height: 1.4;">
+                        <pre id="console-output" style="margin: 0; white-space: pre-wrap; word-wrap: break-word;"></pre>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="execution-result">执行结果</label>
+                    <div style="height: 100px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 10px; font-family: 'Courier New', Courier, monospace; font-size: 12px; line-height: 1.4;">
+                        <pre id="execution-result" style="margin: 0; white-space: pre-wrap; word-wrap: break-word;"></pre>
+                    </div>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" id="cancel-run-btn">取消</button>
+                <button type="button" class="btn btn-primary" id="execute-btn">运行</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 删除确认模态框 -->
+    <div class="confirm-modal" id="delete-modal">
+        <div class="confirm-content">
+            <h3>确认删除</h3>
+            <p>您确定要删除这个应用吗？此操作不可恢复。</p>
+            <div class="confirm-actions">
+                <button class="btn btn-secondary" id="cancel-delete">取消</button>
+                <button class="btn btn-danger" id="confirm-delete">删除</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 设置模态框 -->
+    <div class="modal" id="settings-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>系统设置</h2>
+                <button class="close-btn" id="close-settings-modal">&times;</button>
+            </div>
+            <form id="settings-form">
+                <div class="form-group">
+                    <label for="sqlite-path">SQLite数据库路径</label>
+                    <input type="text" id="sqlite-path" name="sqlite_path" placeholder="请输入SQLite数据库文件路径">
+                    <small class="form-text text-muted">修改数据库路径后，系统将自动迁移数据并重启应用</small>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="cancel-settings-btn">取消</button>
+                    <button type="button" class="btn btn-primary" id="save-settings-btn">保存设置</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- 设置保存确认模态框 -->
+    <div class="confirm-modal" id="settings-confirm-modal">
+        <div class="confirm-content">
+            <h3>确认保存设置</h3>
+            <p>保存设置后，系统将自动迁移数据库并重启应用。请确认是否继续？</p>
+            <div class="confirm-actions">
+                <button class="btn btn-secondary" id="cancel-settings-confirm">取消</button>
+                <button class="btn btn-primary" id="confirm-settings-confirm">确认保存</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sortablejs/1.15.0/Sortable.min.js"></script>
+    <!-- Monaco Editor CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+    <script src="js/script.js"></script>
+</body>
+</html>
