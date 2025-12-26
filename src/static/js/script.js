@@ -1,50 +1,8 @@
-// 初始化Monaco Editor
-let editor;
-require.config({
-    paths: {
-        'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs'
-    }
-});
-
 document.addEventListener('DOMContentLoaded', function() {
-    // 初始化Monaco Editor
-    require(['vs/editor/editor.main'], function() {
-        editor = monaco.editor.create(document.getElementById('code-editor'), {
-            value: '',
-            language: 'python',
-            theme: 'vs-dark',
-            automaticLayout: true,
-            minimap: {
-                enabled: true
-            },
-            scrollBeyondLastLine: false,
-            fontSize: 14,
-            tabSize: 4,
-            insertSpaces: true,
-            lineNumbers: 'on',
-            wordWrap: 'on',
-            bracketPairColorization: {
-                enabled: true
-            },
-            autoClosingBrackets: 'always',
-            autoClosingQuotes: 'always',
-            contextmenu: true,
-            suggestOnTriggerCharacters: true,
-            quickSuggestions: {
-                other: true,
-                comments: false,
-                strings: false
-            },
-            parameterHints: {
-                enabled: true
-            },
-            formatOnType: true
-        });
-    });
-    
     loadApps();
     initSearch();
-    initModal();
+    initTagFilter();
+    initAddAppBtn();
     initDeleteModal();
     initRunModal();
     initSortable();
@@ -57,6 +15,7 @@ function loadApps() {
         .then(response => response.json())
         .then(data => {
             renderApps(data);
+            updateTagFilter(data);
         })
         .catch(error => {
             console.error('加载应用失败:', error);
@@ -106,125 +65,91 @@ function renderApps(apps) {
 // 搜索功能
 function initSearch() {
     const searchInput = document.getElementById('search-input');
-    searchInput.addEventListener('input', function() {
-        const keyword = this.value.toLowerCase();
+    const tagFilter = document.getElementById('tag-filter');
+    
+    function handleSearch() {
+        const keyword = searchInput.value.toLowerCase();
+        const selectedTag = tagFilter.value;
         const cards = document.querySelectorAll('.card');
         
         cards.forEach(card => {
             const title = card.querySelector('.card-title').textContent.toLowerCase();
-            if (title.includes(keyword)) {
+            const cardTagsElement = card.querySelector('.card-tags');
+            const cardTags = cardTagsElement ? cardTagsElement.textContent.toLowerCase() : '';
+            
+            const matchesKeyword = title.includes(keyword);
+            const matchesTag = !selectedTag || cardTags.includes(selectedTag.toLowerCase());
+            
+            if (matchesKeyword && matchesTag) {
                 card.style.display = 'block';
             } else {
                 card.style.display = 'none';
             }
         });
+    }
+    
+    searchInput.addEventListener('input', handleSearch);
+    tagFilter.addEventListener('change', handleSearch);
+}
+
+// 初始化标签过滤器
+function initTagFilter() {
+    // 初始化时不需要额外操作，loadApps会调用updateTagFilter
+}
+
+// 更新标签过滤器选项
+function updateTagFilter(apps) {
+    const tagFilter = document.getElementById('tag-filter');
+    
+    // 收集所有标签，去重并按创建时间倒序排序
+    const tagMap = new Map(); // 用于存储标签及其最早出现的应用创建时间
+    
+    apps.forEach(app => {
+        if (app.tags) {
+            const tags = app.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+            tags.forEach(tag => {
+                const appDate = new Date(app.created_at);
+                if (!tagMap.has(tag) || appDate > new Date(tagMap.get(tag).date)) {
+                    tagMap.set(tag, { tag: tag, date: app.created_at });
+                }
+            });
+        }
+    });
+    
+    // 按创建时间倒序排序
+    const sortedTags = Array.from(tagMap.values())
+        .sort((a, b) => new Date(b.date) - new Date(a.date))
+        .map(item => item.tag);
+    
+    // 保存当前选中的标签
+    const currentSelected = tagFilter.value;
+    
+    // 清空现有选项（保留"全部标签"）
+    tagFilter.innerHTML = '<option value="">全部标签</option>';
+    
+    // 添加排序后的标签选项
+    sortedTags.forEach(tag => {
+        const option = document.createElement('option');
+        option.value = tag;
+        option.textContent = tag;
+        if (tag === currentSelected) {
+            option.selected = true;
+        }
+        tagFilter.appendChild(option);
     });
 }
 
-// 初始化模态框
-function initModal() {
-    const modal = document.getElementById('app-modal');
+// 初始化新增应用按钮
+function initAddAppBtn() {
     const addBtn = document.getElementById('add-app-btn');
-    const closeBtn = document.getElementById('close-modal');
-    const cancelBtn = document.getElementById('cancel-btn');
-    const form = document.getElementById('app-form');
-    
-    // 打开新增模态框
     addBtn.addEventListener('click', function() {
-        document.getElementById('modal-title').textContent = '新增应用';
-        form.reset();
-        // 显式清除app-id字段，确保是新增操作
-        document.getElementById('app-id').value = '';
-        if (editor) {
-            editor.setValue('');
-        }
-        modal.style.display = 'block';
-    });
-    
-    // 关闭模态框
-    function closeModal() {
-        modal.style.display = 'none';
-    }
-    
-    closeBtn.addEventListener('click', closeModal);
-    cancelBtn.addEventListener('click', closeModal);
-    
-    // 点击模态框外部关闭
-    window.addEventListener('click', function(event) {
-        if (event.target === modal) {
-            closeModal();
-        }
-    });
-    
-    // 提交表单
-    form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const formData = {
-            id: document.getElementById('app-id').value || null,
-            name: document.getElementById('app-name').value,
-            tags: document.getElementById('app-tags').value,
-            description: document.getElementById('app-description').value,
-            params: document.getElementById('app-params').value,
-            code: editor ? editor.getValue() : ''
-        };
-        
-        const method = formData.id ? 'PUT' : 'POST';
-        const url = formData.id ? `/api/apps/${formData.id}` : '/api/apps';
-        
-        fetch(url, {
-            method: method,
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(formData)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                closeModal();
-                loadApps();
-            } else {
-                alert('保存失败: ' + data.message);
-            }
-        })
-        .catch(error => {
-            console.error('保存失败:', error);
-            alert('保存失败，请重试');
-        });
+        window.location.href = 'edit_card.html';
     });
 }
 
 // 编辑应用
 function editApp(id) {
-    fetch(`/api/apps/${id}`)
-        .then(response => response.json())
-        .then(app => {
-            document.getElementById('modal-title').textContent = '编辑应用';
-            document.getElementById('app-id').value = app.id;
-            document.getElementById('app-name').value = app.name;
-            document.getElementById('app-tags').value = app.tags;
-            document.getElementById('app-description').value = app.description;
-            document.getElementById('app-params').value = app.params;
-            
-            // 设置Monaco Editor内容
-            if (editor) {
-                editor.setValue(app.code);
-            } else {
-                // 如果编辑器还未初始化，等待初始化后再设置
-                setTimeout(() => {
-                    if (editor) {
-                        editor.setValue(app.code);
-                    }
-                }, 100);
-            }
-            
-            document.getElementById('app-modal').style.display = 'block';
-        })
-        .catch(error => {
-            console.error('加载应用详情失败:', error);
-            alert('加载应用详情失败，请重试');
-        });
+    window.location.href = `edit_card.html?id=${id}`;
 }
 
 // 初始化删除确认模态框
@@ -408,6 +333,11 @@ function showRunModal(id) {
                 }
             }
             
+            // 生成标签HTML
+            const tagsHtml = app.tags ? app.tags.split(',').map(tag => 
+                `<span class="tag">${tag.trim()}</span>`
+            ).join('') : '暂无标签';
+            
             // 生成模态框内容
             const modalBody = document.getElementById('run-modal-body');
             modalBody.innerHTML = `
@@ -418,6 +348,10 @@ function showRunModal(id) {
                 <div class="form-group">
                     <label>功能描述</label>
                     <div>${app.description || '暂无描述'}</div>
+                </div>
+                <div class="form-group">
+                    <label>分类标签</label>
+                    <div class="card-tags">${tagsHtml}</div>
                 </div>
                 <div class="form-group">
                     <label>自定义入参</label>

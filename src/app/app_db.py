@@ -38,6 +38,22 @@ def init_db():
     )
     ''')
     
+    # 创建应用历史记录表
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS app_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        app_id INTEGER NOT NULL,
+        app_name TEXT NOT NULL,
+        tags TEXT,
+        description TEXT,
+        params TEXT,
+        code TEXT NOT NULL,
+        note TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (app_id) REFERENCES apps (id)
+    )
+    ''')
+    
     # 插入默认设置
     cursor.execute('INSERT OR IGNORE INTO system_settings (key, value, description) VALUES (?, ?, ?)', 
                    ('sqlite_path', DB_PATH, 'SQLite数据库文件路径'))

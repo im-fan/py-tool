@@ -22,7 +22,7 @@ def index():
 def get_apps():
     db_conn = app_db.get_db()
     cursor = db_conn.cursor()
-    cursor.execute('SELECT * FROM apps ORDER BY position ASC')
+    cursor.execute('SELECT * FROM apps ORDER BY position DESC')
     apps = cursor.fetchall()
     db_conn.close()
     
@@ -80,10 +80,33 @@ def add_app():
 def update_app(app_id):
     data = request.get_json()
     
-    if not data or not data.get('name') or not data.get('code'):
-        return jsonify({'success': False, 'message': '应用名称和代码不能为空'}), 400
+    if not data or not data.get('name') or not data.get('code') or not data.get('note'):
+        return jsonify({'success': False, 'message': '应用名称、代码和备注不能为空'}), 400
     db_conn = app_db.get_db()
     cursor = db_conn.cursor()
+    
+    # 先获取旧数据，保存到历史记录
+    cursor.execute('SELECT name, tags, description, params, code FROM apps WHERE id = ?', (app_id,))
+    old_app = cursor.fetchone()
+    
+    if old_app:
+        # 保存到历史记录
+        cursor.execute('''
+        INSERT INTO app_history (app_id, app_name, tags, description, params, code, note)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            app_id,
+            old_app['name'],
+            old_app['tags'],
+            old_app['description'],
+            old_app['params'],
+            old_app['code'],
+            data['note']
+        ))
+        
+        # 获取历史记录ID并记录日志
+        history_id = cursor.lastrowid
+        print(f"[INFO] 应用历史记录已保存: 应用ID={app_id}, 历史记录ID={history_id}, 备注={data['note']}")
     
     cursor.execute('''
     UPDATE apps SET 
@@ -104,13 +127,33 @@ def update_app(app_id):
     ))
     
     if cursor.rowcount == 0:
-        conn.close()
+        db_conn.close()
         return jsonify({'success': False, 'message': '应用不存在'}), 404
     
     db_conn.commit()
     db_conn.close()
     
     return jsonify({'success': True, 'message': '应用更新成功'})
+
+# 获取应用历史记录
+@app.route('/api/apps/<int:app_id>/history', methods=['GET'])
+def get_app_history(app_id):
+    db_conn = app_db.get_db()
+    cursor = db_conn.cursor()
+    
+    # 获取最近10条记录
+    cursor.execute('''
+    SELECT * FROM app_history 
+    WHERE app_id = ? 
+    ORDER BY created_at DESC 
+    LIMIT 10
+    ''', (app_id,))
+    history = cursor.fetchall()
+    
+    db_conn.close()
+    
+    history_list = [dict(record) for record in history]
+    return jsonify(history_list)
 
 # 删除应用
 @app.route('/api/apps/<int:app_id>', methods=['DELETE'])
