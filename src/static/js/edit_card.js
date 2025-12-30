@@ -7,12 +7,20 @@ require.config({
 });
 
 document.addEventListener('DOMContentLoaded', function() {
+    // 从localStorage加载主题，默认亮色模式
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    
     // 初始化Monaco Editor
     require(['vs/editor/editor.main'], function() {
+        // 获取当前主题，设置Monaco Editor主题
+        const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+        const editorTheme = currentTheme === 'dark' ? 'vs-dark' : 'vs';
+        
         editor = monaco.editor.create(document.getElementById('code-editor'), {
             value: '',
             language: 'python',
-            theme: 'vs-dark',
+            theme: editorTheme,
             automaticLayout: true,
             minimap: {
                 enabled: true

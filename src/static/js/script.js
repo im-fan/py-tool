@@ -5,9 +5,38 @@ document.addEventListener('DOMContentLoaded', function() {
     initAddAppBtn();
     initDeleteModal();
     initRunModal();
-    initSortable();
     initSettingsModal();
+    initThemeToggle();
 });
+
+// 初始化主题切换
+function initThemeToggle() {
+    const themeToggle = document.getElementById('theme-toggle');
+    
+    // 从localStorage加载主题，默认亮色模式
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    
+    // 点击切换主题
+    themeToggle.addEventListener('click', function() {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+    });
+}
+
+// 更新模态框显示逻辑，支持平滑动画
+function showModal(modalId) {
+    const modal = document.getElementById(modalId);
+    modal.classList.add('show');
+}
+
+function hideModal(modalId) {
+    const modal = document.getElementById(modalId);
+    modal.classList.remove('show');
+}
 
 // 加载应用列表
 function loadApps() {
@@ -161,7 +190,7 @@ function initDeleteModal() {
     const confirmBtn = document.getElementById('confirm-delete');
     
     function closeDeleteModal() {
-        modal.style.display = 'none';
+        hideModal('delete-modal');
         currentDeleteId = null;
     }
     
@@ -200,7 +229,7 @@ function initDeleteModal() {
 // 显示删除确认
 function showDeleteConfirm(id) {
     currentDeleteId = id;
-    document.getElementById('delete-modal').style.display = 'block';
+    showModal('delete-modal');
 }
 
 // 初始化执行模态框
@@ -214,7 +243,7 @@ function initRunModal() {
     
     // 关闭模态框
     function closeRunModal() {
-        modal.style.display = 'none';
+        hideModal('run-modal');
         currentRunId = null;
     }
     
@@ -274,13 +303,11 @@ function initRunModal() {
                     addLog('应用执行成功！');
                     resultDiv.innerHTML = data.output;
                     resultDiv.style.color = '#27ae60';
-                    resultDiv.style.backgroundColor = '#eafaf1';
                     resultDiv.style.borderColor = '#27ae60';
                 } else {
                     addLog('应用执行失败！');
                     resultDiv.innerHTML = `错误：${data.error}\n\n详细信息：\n${data.details || ''}`;
                     resultDiv.style.color = '#e74c3c';
-                    resultDiv.style.backgroundColor = '#fee';
                     resultDiv.style.borderColor = '#e74c3c';
                 }
             })
@@ -288,7 +315,6 @@ function initRunModal() {
                 addLog('网络请求失败！');
                 resultDiv.innerHTML = `请求错误：${error.message}`;
                 resultDiv.style.color = '#e74c3c';
-                resultDiv.style.backgroundColor = '#fee';
                 resultDiv.style.borderColor = '#e74c3c';
             })
             .finally(() => {
@@ -359,7 +385,7 @@ function showRunModal(id) {
                 </div>
             `;
             
-            document.getElementById('run-modal').style.display = 'block';
+            showModal('run-modal');
         })
         .catch(error => {
             console.error('加载应用详情失败:', error);
@@ -367,46 +393,7 @@ function showRunModal(id) {
         });
 }
         
-// 初始化拖拽排序
-function initSortable() {
-    const container = document.getElementById('cards-container');
-    
-    // 检查Sortable库是否存在，避免错误中断后续代码执行
-    if (typeof Sortable !== 'undefined') {
-        new Sortable(container, {
-            animation: 150,
-            ghostClass: 'dragging',
-            handle: '.card',
-            onEnd: function(evt) {
-                // 获取新的顺序
-                const cards = container.querySelectorAll('.card');
-                const newOrder = Array.from(cards).map(card => card.dataset.id);
-                
-                // 更新顺序到服务器
-                fetch('/api/apps/reorder', {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ order: newOrder })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (!data.success) {
-                        alert('更新顺序失败，请重试');
-                        // 重新加载以恢复原始顺序
-                        loadApps();
-                    }
-                })
-                .catch(error => {
-                    console.error('更新顺序失败:', error);
-                    alert('更新顺序失败，请重试');
-                    loadApps();
-                });
-            }
-        });
-    }
-}
+
 
 // 初始化设置模态框
 function initSettingsModal() {
@@ -422,12 +409,12 @@ function initSettingsModal() {
     // 打开设置模态框
     settingsBtn.addEventListener('click', function() {
         loadSettings();
-        modal.style.display = 'block';
+        showModal('settings-modal');
     });
     
     // 关闭设置模态框
     function closeSettingsModal() {
-        modal.style.display = 'none';
+        hideModal('settings-modal');
     }
     
     closeBtn.addEventListener('click', closeSettingsModal);
@@ -443,18 +430,18 @@ function initSettingsModal() {
     // 保存设置按钮点击
     saveBtn.addEventListener('click', function() {
         // 显示确认模态框
-        confirmModal.style.display = 'block';
+        showModal('settings-confirm-modal');
     });
     
     // 取消保存设置
     cancelConfirmBtn.addEventListener('click', function() {
-        confirmModal.style.display = 'none';
+        hideModal('settings-confirm-modal');
     });
     
     // 点击确认模态框外部关闭
     window.addEventListener('click', function(event) {
         if (event.target === confirmModal) {
-            confirmModal.style.display = 'none';
+            hideModal('settings-confirm-modal');
         }
     });
     
