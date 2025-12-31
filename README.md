@@ -73,7 +73,7 @@ python3 -m src.run
 在浏览器中打开：http://127.0.0.1:5000
 
 ### 4.示例
-![示例](https://github.com/im-fan/py-tool/blob/main/src/static/video/demo.gif)
+<img src="./src/static/resource/demo.gif" alt="示例" height="80%"  width="80%" />
 
 ## 注意事项
 
