@@ -73,7 +73,7 @@ python3 -m src.run
 在浏览器中打开：http://127.0.0.1:5000
 
 ### 4.示例
-![示例](src/static/video/demo.mp4)
+![示例](https://github.com/im-fan/py-tool/blob/main/src/static/video/demo.gif)
 
 ## 注意事项
 
