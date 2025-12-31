@@ -46,7 +46,7 @@
 - ✅ 执行状态反馈
 
 ## 技术栈
-
+- **编程工具**： TACE CN（SOLO）
 - **后端**：Python 3.x + Flask
 - **前端**：HTML5 + CSS3 + JavaScript (ES6+)
 - **数据库**：SQLite
